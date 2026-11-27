@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MMA Projects — Signature Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 20px;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 680px;
+      overflow: hidden;
+    }
+
+    .header {
+      border-left: 3px solid #434343;
+      padding: 28px 32px;
+      background: #fff;
+    }
+
+    .header img {
+      height: 36px;
+      width: auto;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      font-size: 11px;
+      color: #999;
+      letter-spacing: 0.02em;
+    }
+
+    .form-section {
+      padding: 32px;
+      border-top: 1px solid #eee;
+    }
+
+    .form-section h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #434343;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 2px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: Arial, sans-serif;
+      color: #434343;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: #434343;
+    }
+
+    .preview-section {
+      padding: 32px;
+      border-top: 1px solid #eee;
+      background: #fafafa;
+    }
+
+    .preview-section h2 {
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+    }
+
+    .preview-box {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 2px;
+      padding: 20px;
+    }
+
+    .copy-btn {
+      margin-top: 24px;
+      width: 100%;
+      background: #434343;
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      padding: 13px;
+      font-size: 13px;
+      font-family: Arial, sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .copy-btn:hover { background: #222; }
+
+    .copy-btn.copied {
+      background: #2e7d32;
+    }
+
+    .instructions {
+      padding: 20px 32px 32px;
+      border-top: 1px solid #eee;
+    }
+
+    .instructions h2 {
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .instructions ol {
+      padding-left: 16px;
+    }
+
+    .instructions li {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.8;
+    }
+
+    .instructions strong { color: #434343; }
+    /* ---- Banner feature ---- */
+    select {
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 2px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: Arial, sans-serif;
+      color: #434343;
+      background: #fff;
+      outline: none;
+    }
+    select:focus { border-color: #434343; }
+
+    #settingsView { display: none; }
+    body[data-view="settings"] #mainView { display: none; }
+    body[data-view="settings"] #settingsView { display: block; }
+
+    .hint { font-size: 11px; color: #999; line-height: 1.6; margin-top: 6px; }
+    .settings-link { margin-top: 20px; font-size: 11px; }
+    .settings-link a, .back-link a { color: #bbb; text-decoration: none; }
+    .settings-link a:hover, .back-link a:hover { color: #434343; }
+    .back-link { padding: 20px 32px 32px; border-top: 1px solid #eee; font-size: 12px; }
+    .back-link a { color: #666; }
+
+    .bcard { border: 1px solid #eee; padding: 20px; margin-bottom: 16px; background: #fff; }
+    .bcard .row { display: flex; gap: 12px; }
+    .bcard .row .field { flex: 1; min-width: 0; }
+    .bcard .width-row { display: flex; align-items: center; gap: 12px; }
+    .bcard input[type=range] { flex: 1; padding: 0; border: none; }
+    .bcard input[type=number] { width: 90px; flex: none; }
+    .bcard .check { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; margin: 0; text-transform: none; letter-spacing: 0; }
+    .bcard .check input { width: auto; }
+    .bprev { background: #fafafa; border: 1px dashed #ddd; padding: 12px; overflow: auto; margin-top: 4px; min-height: 48px; }
+    .bprev img { display: block; max-width: none; height: auto; }
+    .bcard-actions { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .link-btn { background: none; border: none; color: #b23b3b; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; font-family: Arial, sans-serif; }
+    .link-btn:hover { text-decoration: underline; }
+    .copy-btn.secondary { background: #fff; color: #434343; border: 1px solid #434343; margin-top: 8px; }
+    .copy-btn.secondary:hover { background: #f0f0f0; }
+    .empty { font-size: 12px; color: #999; margin-bottom: 16px; }
+    .status { font-size: 12px; color: #2e7d32; margin-top: 12px; line-height: 1.5; min-height: 18px; }
+    .status.error { color: #b23b3b; }
+    .btn-row { display: flex; gap: 12px; }
+    .btn-row .copy-btn { flex: 1; }
+    input[type=file] { padding: 6px; font-size: 12px; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <img id="headerLogo" alt="MMA Projects">
+    <p id="headerSub">Gmail Signature Generator</p>
+  </div>
+
+  <div id="mainView">
+  <!-- Form -->
+  <div class="form-section">
+    <h2>Your details</h2>
+    <div class="field">
+      <label>Name &amp; Surname</label>
+      <input type="text" id="nameInput" placeholder="es. mario rossi" oninput="updatePreview()">
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <input type="text" id="roleInput" placeholder="es. project manager" oninput="updatePreview()">
+    </div>
+    <div class="field" id="bannerField" style="display:none">
+      <label>Banner (optional)</label>
+      <select id="bannerSelect" onchange="updatePreview()"></select>
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-section">
+    <h2>Preview</h2>
+    <div class="preview-box" id="previewBox">
+      <!-- rendered here -->
+    </div>
+    <button class="copy-btn" id="copyBtn" onclick="copySignature()">⎘ &nbsp; Copy signature</button>
+  </div>
+
+  <!-- Instructions -->
+  <div class="instructions">
+    <h2>How to install in Gmail</h2>
+    <ol>
+      <li>Click <strong>Copy signature</strong> above</li>
+      <li>Open <strong>Gmail → Settings (⚙) → See all settings → Signature</strong></li>
+      <li>Create a new signature or edit an existing one</li>
+      <li>Click inside the signature editor and press <strong>Ctrl+V</strong> (or Cmd+V on Mac)</li>
+      <li>Click <strong>Save Changes</strong></li>
+    </ol>
+    <p class="settings-link"><a href="#settings">Banner settings</a></p>
+  </div>
+  </div>
+  <!-- /mainView -->
+
+  <!-- Settings (admin) -->
+  <div id="settingsView">
+    <div class="form-section">
+      <h2>Banners</h2>
+      <p class="hint" style="margin:0 0 20px;">
+        Gmail does not accept images embedded in a signature, so each banner is stored in the GitHub repo
+        and shown from there. Use <strong>Upload image</strong> on a banner (needs the GitHub token below),
+        or paste the link of an image that is already online.
+        Export the image at 2&times; the size you want to display so it stays sharp on retina screens.
+        Only active banners that have not expired appear in the dropdown for staff.
+      </p>
+      <div id="bannerList"></div>
+      <button class="copy-btn secondary" onclick="addBanner()">+ &nbsp; Add banner</button>
+    </div>
+
+    <div class="form-section">
+      <h2>GitHub connection</h2>
+      <p class="hint" style="margin:0 0 16px;">
+        The token lets this page save banners and images to the repo. It is stored only in this browser,
+        never in the file. Create it on GitHub: profile photo &rarr; Settings &rarr; Developer settings &rarr;
+        Personal access tokens &rarr; Fine-grained tokens &rarr; Generate new token. Under Repository access choose
+        <strong>Only select repositories &rarr; MMA_Signature</strong>, and under Repository permissions set
+        <strong>Contents: Read and write</strong>.
+      </p>
+      <div class="field">
+        <label>Access token</label>
+        <input type="password" id="ghToken" placeholder="github_pat_..." autocomplete="off">
+      </div>
+      <div class="btn-row">
+        <button class="copy-btn secondary" style="margin-top:0" onclick="saveToken()">Save token on this computer</button>
+        <button class="copy-btn secondary" style="margin-top:0" onclick="removeToken()">Remove token</button>
+      </div>
+    </div>
+
+    <div class="preview-section">
+      <h2>Publish changes</h2>
+      <p class="hint" style="margin:0;">
+        Publishing saves the banner list (<strong>banners.json</strong>) in the repo. Staff see the change after
+        GitHub refreshes the site, usually within a few minutes.
+      </p>
+      <button class="copy-btn" onclick="publishBanners()">&#8679; &nbsp; Publish banners</button>
+      <button class="copy-btn secondary" onclick="downloadJson()">Download banners.json (manual backup)</button>
+      <p class="status" id="ghStatus"></p>
+    </div>
+
+    <div class="back-link"><a href="#">&larr; Back to signature generator</a></div>
+  </div>
+
+</div>
+
+<script id="banner-config" type="application/json">{"banners": []}</script>
+
+<script>
+  // ---------- Hosted images (edit here only) ----------
+  // Files live in the GitHub repo Pain1666/MMA_Signature and are served by GitHub Pages.
+  // Never rename or delete these files: every signature already sent points to them.
+  const ASSET_BASE = 'https://pain1666.github.io/MMA_Signature/';
+  const ASSETS = {
+    logo:      ASSET_BASE + 'logoMMA.png',
+    instagram: ASSET_BASE + 'instagram.png',
+    linkedin:  ASSET_BASE + 'linkedin.png',
+    facebook:  ASSET_BASE + 'facebook.png'
+  };
+  document.getElementById('headerLogo').src = ASSETS.logo;
+
+  function getSignatureHTML(name, role, banner) {
+    const nameLower = name.toLowerCase() || 'nome cognome';
+    const roleLower = role.toLowerCase() || 'ruolo';
+    const bannerHTML = buildBannerHTML(banner);
+
+    return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <tr>
+    <td style="padding:0;">
+
+      <p style="margin:0; padding:0; line-height:1.4;">
+        <span style="color:#434343; font-size:11pt; font-weight:700;">${nameLower}</span>
+        <span style="color:#434343; font-size:11pt;"> | </span>
+        <span style="color:#434343; font-size:11pt; font-weight:700;">${roleLower}</span>
+      </p>
+
+      <p style="margin:8px 0 8px 0; padding:0;">
+        <a href="http://www.mmaprojects.com/" target="_blank">
+          <img src="${ASSETS.logo}" alt="MMA Projects" width="208" style="display:block; border:0; height:auto;">
+        </a>
+      </p>
+
+      <p style="margin:0; padding:0; line-height:1.4;">
+        <span style="color:#434343; font-size:11pt; font-weight:700;">MMAPROJECTS</span>
+      </p>
+
+      <p style="margin:0; padding:0; line-height:1.1;">
+        <span style="color:#8c8680; font-size:9pt;">via Paganini 20, Barlassina</span><br>
+        <span style="color:#8c8680; font-size:9pt;">20825 Milano, Italy</span><br>
+        <span style="color:#8c8680; font-size:9pt;">t 0039 0362 528295</span><br>
+        <span style="color:#8c8680; font-size:9pt;">info@mmaprojects.com</span><br>
+        <a href="http://www.mmaprojects.com/" style="color:#8c8680; font-size:9pt;">http://www.mmaprojects.com</a>
+      </p>
+
+      <p style="margin:8px 0 8px 0; padding:0; line-height:1;">
+        <a href="https://www.instagram.com/mmaprojects/" target="_blank" style="text-decoration:none; border:0; display:inline-block; line-height:1;">
+          <img src="${ASSETS.instagram}" alt="Instagram" width="17" height="17" style="border:0; display:block; outline:none;">
+        </a>&nbsp;<a href="https://www.linkedin.com/company/mmaprojects/" target="_blank" style="text-decoration:none; border:0; display:inline-block; line-height:1;">
+          <img src="${ASSETS.linkedin}" alt="LinkedIn" width="17" height="17" style="border:0; display:block; outline:none;">
+        </a>&nbsp;<a href="https://www.facebook.com/mmaprojects" target="_blank" style="text-decoration:none; border:0; display:inline-block; line-height:1;">
+          <img src="${ASSETS.facebook}" alt="Facebook" width="17" height="17" style="border:0; display:block; outline:none;">
+        </a>
+      </p>
+
+      ${bannerHTML}<p style="margin:0; padding:0; line-height:1.0; text-align:justify;">
+        <span style="color:#999999; font-size:7pt;">The information transmitted is intended only for the person or entity to which it is addressed and may contain confidential and/or privileged material. Review, retransmission, dissemination or other use of this information by persons or entities other than the intended recipient is prohibited. If you received this in error, please contact the sender and delete the material from any computer or mobile device. Please be informed that if this message is answered by email your response could be read by third parties with access to the net. If your message contains passwords, credit card numbers or any other confidential information it would be safer to cancel your transmission and use other ways of communication. MMA Projects cannot assume the responsibility of the fact that third parties could access the contents of this message during transmission. Your personal information and data are processed in accordance with the provisions of Art. 13 of Legislative Decree 196/2003 and of the European Regulation 2016/679. The information about this can be obtained free of charge by sending an email to <a href="mailto:info@mmaprojects.com" style="color:#999999;">info@mmaprojects.com</a></span>
+      </p>
+
+      <p style="margin:8px 0 0 0; padding:0; line-height:1.0; text-align:justify;">
+        <span style="color:#999999; font-size:7pt;">Le informazioni trasmesse sono destinate esclusivamente alla persona o entità a cui sono indirizzate e possono contenere materiale riservato e/o privilegiato. È vietata la revisione, la ri-trasmissione, la diffusione o altro uso di tali informazioni da parte di persone o entità diverse dal destinatario previsto. Se hai ricevuto questo messaggio per errore, contatta il mittente ed elimina il materiale da qualsiasi computer o dispositivo mobile. Si informa inoltre che se questo messaggio viene risposto tramite e-mail, la tua risposta potrebbe essere letta da terze parti con accesso alla rete internet. Se il tuo messaggio contiene password, numeri di carte di credito o altre informazioni riservate, sarebbe più sicuro cancellare la tua trasmissione e utilizzare altri modi di comunicazione. MMA Projects non si può assumere la responsabilità del fatto che terze parti potrebbero accedere ai contenuti di questo messaggio durante la trasmissione. I vostri dati sono trattati ai sensi dei disposti dell'art. 13 del D. Lgs. 196/2003 e del Regolamento Europeo 2016/679. L'Informativa in merito è ottenibile gratuitamente inviando una mail a <a href="mailto:info@mmaprojects.com" style="color:#999999;">info@mmaprojects.com</a></span>
+      </p>
+
+      <p style="margin:8px 0 0 0; padding:0; line-height:1.0; text-align:justify;">
+        <span style="color:#999999; font-size:7pt;">L'informativa completa per il trattamento dei dati personali dei candidati ART. 13 e 14 del regolamento (UE) 2016/679 ("GDPR") disponibile qui: <a href="https://mmaprojects.com/public/pdf/Page/INFORMATIVA-2023-07.pdf" style="color:#999999; text-decoration:underline;">INFORMATIVA-2023-07.pdf</a></span>
+      </p>
+
+    </td>
+  </tr>
+</table>`;
+  }
+
+  function updatePreview() {
+    const name = document.getElementById('nameInput').value;
+    const role = document.getElementById('roleInput').value;
+    document.getElementById('previewBox').innerHTML = getSignatureHTML(name, role, getSelectedBanner());
+  }
+
+  async function copySignature() {
+    const name = document.getElementById('nameInput').value;
+    const role = document.getElementById('roleInput').value;
+    const html = getSignatureHTML(name, role, getSelectedBanner());
+
+    try {
+      const blob = new Blob([html], { type: 'text/html' });
+      const clipboardItem = new ClipboardItem({ 'text/html': blob });
+      await navigator.clipboard.write([clipboardItem]);
+
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓  Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = '⎘ &nbsp; Copy signature';
+        btn.classList.remove('copied');
+      }, 2500);
+    } catch (err) {
+      alert('Copy failed. Please select all content in the preview and copy manually (Ctrl+A, Ctrl+C).');
+    }
+  }
+
+  // ---------- Banners ----------
+  let banners = [];
+  let unsaved = false;
+
+  const GH = { owner: 'Pain1666', repo: 'MMA_Signature', branch: 'main' };
+  const GH_API = `https://api.github.com/repos/${GH.owner}/${GH.repo}`;
+  const TOKEN_KEY = 'mma_gh_token';
+
+  function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function ghHeaders(extra) {
+    return Object.assign({ 'Authorization': 'Bearer ' + getToken(), 'Accept': 'application/vnd.github+json' }, extra || {});
+  }
+
+  function parseBanners(text) {
+    const c = JSON.parse(text);
+    return Array.isArray(c.banners) ? c.banners : [];
+  }
+
+  function embeddedBanners() {
+    try { return parseBanners(document.getElementById('banner-config').textContent); } catch (e) { return []; }
+  }
+
+  // Staff: banners.json next to this page. Admin with a token: straight from the repo (no CDN delay).
+  async function loadBanners() {
+    if (getToken()) {
+      try {
+        const r = await fetch(`${GH_API}/contents/banners.json?ref=${GH.branch}`, {
+          headers: ghHeaders({ 'Accept': 'application/vnd.github.raw+json' }), cache: 'no-store'
+        });
+        if (r.ok) return parseBanners(await r.text());
+      } catch (e) { /* fall through */ }
+    }
+    try {
+      const r = await fetch('banners.json?t=' + Date.now(), { cache: 'no-store' });
+      if (r.ok) return parseBanners(await r.text());
+    } catch (e) { /* fall through */ }
+    return embeddedBanners();
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function normUrl(u) {
+    u = (u || '').trim();
+    if (!/^https?:\/\//i.test(u)) return '';
+    if (/dropbox\.com/i.test(u)) {
+      if (/[?&]dl=0/.test(u)) u = u.replace(/([?&])dl=0/, '$1dl=1');
+      else if (!/[?&]dl=/.test(u)) u += (u.indexOf('?') > -1 ? '&' : '?') + 'dl=1';
+    }
+    return u;
+  }
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function isActive(b) {
+    return b.active !== false && !!normUrl(b.url) && (!b.expires || b.expires >= todayStr());
+  }
+
+  function clampWidth(w) {
+    w = parseInt(w, 10);
+    if (isNaN(w)) w = 400;
+    return Math.max(50, Math.min(700, w));
+  }
+
+  function buildBannerHTML(b) {
+    if (!b) return '';
+    const url = normUrl(b.url);
+    if (!url) return '';
+    const img = `<img src="${esc(url)}" alt="${esc(b.name)}" width="${clampWidth(b.width)}" style="display:block; border:0; height:auto;">`;
+    const link = (b.link || '').trim();
+    const inner = /^https?:\/\//i.test(link) ? `<a href="${esc(link)}" target="_blank">${img}</a>` : img;
+    return `<p style="margin:8px 0 8px 0; padding:0;">${inner}</p>
+
+      `;
+  }
+
+  function getSelectedBanner() {
+    const sel = document.getElementById('bannerSelect');
+    if (!sel || !sel.value) return null;
+    return banners.find(b => b.id === sel.value && isActive(b)) || null;
+  }
+
+  function refreshSelect() {
+    const sel = document.getElementById('bannerSelect');
+    const prev = sel.value;
+    const avail = banners.filter(isActive);
+    sel.innerHTML = '<option value="">None</option>' +
+      avail.map(b => `<option value="${esc(b.id)}">${esc(b.name || 'Untitled')}</option>`).join('');
+    sel.value = avail.some(b => b.id === prev) ? prev : '';
+    document.getElementById('bannerField').style.display = avail.length ? '' : 'none';
+    updatePreview();
+  }
+
+  // ---------- Settings page ----------
+  function cardHTML(b) {
+    const w = clampWidth(b.width);
+    return `<div class="bcard" data-id="${esc(b.id)}">
+      <div class="row">
+        <div class="field"><label>Name (shown in dropdown)</label>
+          <input type="text" data-f="name" value="${esc(b.name)}" placeholder="es. Premio 2026"></div>
+        <div class="field"><label>Hide after (optional)</label>
+          <input type="date" data-f="expires" value="${esc(b.expires)}"></div>
+      </div>
+      <div class="field"><label>Image URL</label>
+        <input type="text" data-f="url" value="${esc(b.url)}" placeholder="https://..."> 
+        <input type="file" accept="image/png,image/jpeg,image/gif" data-action="upload" style="margin-top:8px;">
+        <p class="hint">Upload image saves the file in the repo and fills in the link.</p></div>
+      <div class="field"><label>Link when clicked (optional)</label>
+        <input type="text" data-f="link" value="${esc(b.link)}" placeholder="https://..."></div>
+      <div class="field"><label>Display width (px)</label>
+        <div class="width-row">
+          <input type="range" data-f="width" min="50" max="700" step="1" value="${w}">
+          <input type="number" data-f="width" min="50" max="700" value="${w}">
+        </div>
+      </div>
+      <label>Preview at actual size</label>
+      <div class="bprev"><img src="${esc(b._preview || normUrl(b.url))}" alt="Image not loading &mdash; check the link" width="${w}"></div>
+      <div class="bcard-actions">
+        <label class="check"><input type="checkbox" data-f="active" ${b.active !== false ? 'checked' : ''}> Active (visible to staff)</label>
+        <button class="link-btn" data-action="delete">Delete</button>
+      </div>
+    </div>`;
+  }
+
+  function renderSettings() {
+    const list = document.getElementById('bannerList');
+    list.innerHTML = banners.length ? banners.map(cardHTML).join('') : '<p class="empty">No banners yet.</p>';
+  }
+
+  function addBanner() {
+    banners.push({
+      id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: 'New banner', url: '', link: '', width: 400, active: true, expires: ''
+    });
+    unsaved = true;
+    renderSettings();
+    refreshSelect();
+  }
+
+  function onBannerEdit(e) {
+    const card = e.target.closest('.bcard');
+    if (!card) return;
+    const b = banners.find(x => x.id === card.dataset.id);
+    if (!b) return;
+    if (e.target.dataset.action === 'upload') {
+      if (e.type === 'change' && e.target.files && e.target.files[0]) handleUpload(b, e.target.files[0]);
+      return;
+    }
+    const f = e.target.dataset.f;
+    if (!f) return;
+    if (f === 'url') delete b._preview;
+
+    if (f === 'active') b.active = e.target.checked;
+    else if (f === 'width') {
+      b.width = clampWidth(e.target.value);
+      card.querySelectorAll('[data-f="width"]').forEach(el => { if (el !== e.target) el.value = b.width; });
+    } else b[f] = e.target.value;
+
+    if (f === 'url' && e.type === 'change') e.target.value = b.url = normUrl(b.url) || b.url.trim();
+
+    const img = card.querySelector('.bprev img');
+    img.src = b._preview || normUrl(b.url);
+    img.width = clampWidth(b.width);
+
+    unsaved = true;
+    refreshSelect();
+  }
+
+  function setStatus(msg, isError) {
+    const el = document.getElementById('ghStatus');
+    el.textContent = msg;
+    el.className = 'status' + (isError ? ' error' : '');
+  }
+
+  async function ghError(resp) {
+    let m = '';
+    try { m = (await resp.json()).message || ''; } catch (e) { /* ignore */ }
+    if (resp.status === 401) return new Error('GitHub rejected the token (invalid or expired). Create a new one and save it again.');
+    if (resp.status === 403) return new Error('The token has no permission to write, or GitHub is limiting requests. ' + m);
+    if (resp.status === 404) return new Error('Repository not found, or the token has no access to MMA_Signature (needs Contents: Read and write).');
+    if (resp.status === 409 || resp.status === 422) return new Error('GitHub could not save the file: ' + m);
+    return new Error('GitHub error ' + resp.status + '. ' + m);
+  }
+
+  function toBase64(str) { return btoa(unescape(encodeURIComponent(str))); }
+
+  function bannersJson() {
+    return JSON.stringify({ banners: banners }, function (k, v) { return k.charAt(0) === '_' ? undefined : v; }, 2);
+  }
+
+  function saveToken() {
+    const v = document.getElementById('ghToken').value.trim();
+    if (!v) { setStatus('Paste the token first.', true); return; }
+    try { localStorage.setItem(TOKEN_KEY, v); } catch (e) { setStatus('This browser does not allow saving the token.', true); return; }
+    document.getElementById('ghToken').value = '';
+    setStatus('Token saved on this computer.');
+    loadBanners().then(function (list) { banners = list; renderSettings(); refreshSelect(); });
+  }
+
+  function removeToken() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ }
+    setStatus('Token removed from this computer.');
+  }
+
+  async function publishBanners() {
+    if (!getToken()) { setStatus('Save your GitHub token first.', true); return; }
+    setStatus('Publishing...');
+    try {
+      const url = `${GH_API}/contents/banners.json`;
+      let sha;
+      const g = await fetch(`${url}?ref=${GH.branch}`, { headers: ghHeaders(), cache: 'no-store' });
+      if (g.ok) sha = (await g.json()).sha;
+      else if (g.status !== 404) throw await ghError(g);
+      const body = { message: 'Update banners', content: toBase64(bannersJson() + '\n'), branch: GH.branch };
+      if (sha) body.sha = sha;
+      const p = await fetch(url, { method: 'PUT', headers: ghHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+      if (!p.ok) throw await ghError(p);
+      unsaved = false;
+      setStatus('Published. Staff will see the changes once GitHub refreshes the site (usually 1-10 minutes).');
+    } catch (e) { setStatus(e.message, true); }
+  }
+
+  function readAsDataURL(file) {
+    return new Promise(function (resolve, reject) {
+      const fr = new FileReader();
+      fr.onload = function () { resolve(fr.result); };
+      fr.onerror = function () { reject(new Error('Could not read the file.')); };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  function naturalWidth(dataUrl) {
+    return new Promise(function (resolve) {
+      const im = new Image();
+      const t = setTimeout(function () { resolve(0); }, 2000);
+      im.onload = function () { clearTimeout(t); resolve(im.naturalWidth); };
+      im.onerror = function () { clearTimeout(t); resolve(0); };
+      im.src = dataUrl;
+    });
+  }
+
+  async function handleUpload(b, file) {
+    if (!getToken()) { setStatus('Save your GitHub token before uploading images.', true); return; }
+    if (file.size > 5 * 1024 * 1024) { setStatus('The image is larger than 5 MB. Compress it first.', true); return; }
+    setStatus('Uploading ' + file.name + '...');
+    try {
+      const dataUrl = await readAsDataURL(file);
+      const nw = await naturalWidth(dataUrl);
+      const slug = file.name.toLowerCase().replace(/[^a-z0-9.\-_]+/g, '-');
+      const path = 'banners/' + todayStr() + '-' + slug;
+      const r = await fetch(`${GH_API}/contents/${encodeURI(path)}`, {
+        method: 'PUT',
+        headers: ghHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ message: 'Add banner image ' + slug, content: dataUrl.split(',')[1], branch: GH.branch })
+      });
+      if (!r.ok) throw await ghError(r);
+      b.url = ASSET_BASE + encodeURI(path);
+      b._preview = dataUrl;
+      if (nw) b.width = Math.min(600, nw >= 800 ? Math.round(nw / 2) : nw);
+      unsaved = true;
+      renderSettings();
+      refreshSelect();
+      setStatus('Image uploaded. It goes online in 1-2 minutes. Click Publish banners when the banner is ready.');
+    } catch (e) { setStatus(e.message, true); }
+  }
+
+  function downloadJson() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([bannersJson() + '\n'], { type: 'application/json' }));
+    a.download = 'banners.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function route() {
+    const settings = location.hash === '#settings';
+    document.body.dataset.view = settings ? 'settings' : 'main';
+    document.getElementById('headerSub').textContent = settings ? 'Banner settings' : 'Gmail Signature Generator';
+    if (settings) renderSettings();
+  }
+
+  const bannerListEl = document.getElementById('bannerList');
+  bannerListEl.addEventListener('input', onBannerEdit);
+  bannerListEl.addEventListener('change', onBannerEdit);
+  bannerListEl.addEventListener('click', function (e) {
+    if (e.target.dataset.action !== 'delete') return;
+    const card = e.target.closest('.bcard');
+    if (!confirm('Delete this banner?')) return;
+    banners = banners.filter(x => x.id !== card.dataset.id);
+    unsaved = true;
+    renderSettings();
+    refreshSelect();
+  });
+  window.addEventListener('hashchange', route);
+  window.addEventListener('beforeunload', function (e) {
+    if (unsaved) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // Init
+  banners = embeddedBanners();
+  refreshSelect();
+  route();
+  loadBanners().then(function (list) {
+    banners = list;
+    refreshSelect();
+    if (document.body.dataset.view === 'settings') renderSettings();
+  });
+</script>
+</body>
+</html>
