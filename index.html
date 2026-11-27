@@ -33,8 +33,8 @@
     }
 
     .header img {
-      height: 36px;
-      width: auto;
+      width: 208px; /* same display width as the logo in the signature */
+      height: auto;
       display: block;
       margin-bottom: 6px;
     }
@@ -202,6 +202,13 @@
     .btn-row { display: flex; gap: 12px; }
     .btn-row .copy-btn { flex: 1; }
     input[type=file] { padding: 6px; font-size: 12px; }
+
+    body[data-view="settings"] .container { overflow: visible; }
+    .sig-sticky { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid #ddd; padding: 16px 32px 20px; }
+    .sig-sticky h2 { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; font-weight: 700; }
+    .sig-sticky h2 span { color: #434343; }
+    .sig-scroll { position: relative; max-height: 42vh; overflow: auto; border: 1px solid #eee; padding: 16px; background: #fff; }
+    .bcard.sel { border-color: #434343; box-shadow: inset 3px 0 0 #434343; }
   </style>
 </head>
 <body>
@@ -257,6 +264,10 @@
 
   <!-- Settings (admin) -->
   <div id="settingsView">
+    <div class="sig-sticky">
+      <h2>Preview in the signature &mdash; <span id="sigPreviewName"></span></h2>
+      <div class="sig-scroll" id="sigPreview"></div>
+    </div>
     <div class="form-section">
       <h2>Banners</h2>
       <p class="hint" style="margin:0 0 20px;">
@@ -267,10 +278,15 @@
         Only active banners that have not expired appear in the dropdown for staff.
       </p>
       <div id="bannerList"></div>
-      <button class="copy-btn secondary" onclick="addBanner()">+ &nbsp; Add banner</button>
+      <button class="copy-btn secondary" id="addBtn" onclick="addBanner()">+ &nbsp; Add banner</button>
+      <button class="copy-btn" id="publishBtn" style="display:none" onclick="publishBanners()">&#8679; &nbsp; Publish banner</button>
+      <p class="hint" id="publishHint" style="display:none">Saves the banner list in the repo. Staff see the change once GitHub refreshes the site, usually within a few minutes.</p>
+      <p class="status" id="ghStatus"></p>
     </div>
 
-    <div class="form-section">
+    <div class="back-link"><a href="#">&larr; Back to signature generator</a></div>
+
+    <div class="form-section" style="background:#fafafa;">
       <h2>GitHub connection</h2>
       <p class="hint" style="margin:0 0 16px;">
         The token lets this page save banners and images to the repo. It is stored only in this browser,
@@ -287,20 +303,8 @@
         <button class="copy-btn secondary" style="margin-top:0" onclick="saveToken()">Save token on this computer</button>
         <button class="copy-btn secondary" style="margin-top:0" onclick="removeToken()">Remove token</button>
       </div>
-    </div>
-
-    <div class="preview-section">
-      <h2>Publish changes</h2>
-      <p class="hint" style="margin:0;">
-        Publishing saves the banner list (<strong>banners.json</strong>) in the repo. Staff see the change after
-        GitHub refreshes the site, usually within a few minutes.
-      </p>
-      <button class="copy-btn" onclick="publishBanners()">&#8679; &nbsp; Publish banners</button>
       <button class="copy-btn secondary" onclick="downloadJson()">Download banners.json (manual backup)</button>
-      <p class="status" id="ghStatus"></p>
     </div>
-
-    <div class="back-link"><a href="#">&larr; Back to signature generator</a></div>
   </div>
 
 </div>
@@ -321,10 +325,10 @@
   };
   document.getElementById('headerLogo').src = ASSETS.headerLogo;
 
-  function getSignatureHTML(name, role, banner) {
+  function getSignatureHTML(name, role, banner, preview) {
     const nameLower = name.toLowerCase() || 'nome cognome';
     const roleLower = role.toLowerCase() || 'ruolo';
-    const bannerHTML = buildBannerHTML(banner);
+    const bannerHTML = buildBannerHTML(banner, preview);
 
     return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
   <tr>
@@ -477,11 +481,11 @@
     return Math.max(50, Math.min(700, w));
   }
 
-  function buildBannerHTML(b) {
+  function buildBannerHTML(b, preview) {
     if (!b) return '';
-    const url = normUrl(b.url);
+    const url = preview ? (b._preview || normUrl(b.url)) : normUrl(b.url);
     if (!url) return '';
-    const img = `<img src="${esc(url)}" alt="${esc(b.name)}" width="${clampWidth(b.width)}" style="display:block; border:0; height:auto;">`;
+    const img = `<img src="${esc(url)}"${preview ? ' data-banner="1"' : ''} alt="${esc(b.name)}" width="${clampWidth(b.width)}" style="display:block; border:0; height:auto;">`;
     const link = (b.link || '').trim();
     const inner = /^https?:\/\//i.test(link) ? `<a href="${esc(link)}" target="_blank">${img}</a>` : img;
     return `<p style="margin:8px 0 8px 0; padding:0;">${inner}</p>
@@ -537,16 +541,55 @@
     </div>`;
   }
 
+  let previewId = null;
+  let lastScrolledId = null;
+
+  function markSelected() {
+    document.querySelectorAll('#bannerList .bcard').forEach(function (c) {
+      c.classList.toggle('sel', c.dataset.id === previewId);
+    });
+  }
+
+  function renderSigPreview(scroll) {
+    const b = banners.find(x => x.id === previewId) || null;
+    const box = document.getElementById('sigPreview');
+    document.getElementById('sigPreviewName').textContent = b ? (b.name || 'Untitled') : '';
+    box.innerHTML = getSignatureHTML('', '', b, true);
+    if (b && !(b._preview || normUrl(b.url))) {
+      box.insertAdjacentHTML('afterbegin', '<p class="hint" style="margin:0 0 12px;">Add an image link or upload an image to see this banner in the signature.</p>');
+    }
+    if (scroll || lastScrolledId !== (b && b.id)) {
+      const img = box.querySelector('img[data-banner]');
+      if (img) box.scrollTop = Math.max(0, img.offsetTop - box.clientHeight / 3);
+      lastScrolledId = b ? b.id : null;
+    }
+  }
+
+  function setPreviewTarget(id) {
+    const changed = id !== previewId;
+    previewId = id;
+    markSelected();
+    renderSigPreview(changed);
+  }
+
   function renderSettings() {
     const list = document.getElementById('bannerList');
     list.innerHTML = banners.length ? banners.map(cardHTML).join('') : '<p class="empty">No banners yet.</p>';
+    if (!banners.some(x => x.id === previewId)) previewId = banners.length ? banners[0].id : null;
+    markSelected();
+    renderSigPreview(false);
+    document.getElementById('addBtn').style.display = banners.length ? 'none' : '';
+    document.getElementById('publishBtn').style.display = banners.length ? '' : 'none';
+    document.getElementById('publishHint').style.display = banners.length ? '' : 'none';
   }
 
   function addBanner() {
-    banners.push({
+    const nb = {
       id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       name: 'New banner', url: '', link: '', width: 400, active: true, expires: ''
-    });
+    };
+    banners.push(nb);
+    previewId = nb.id;
     unsaved = true;
     renderSettings();
     refreshSelect();
@@ -579,6 +622,7 @@
 
     unsaved = true;
     refreshSelect();
+    setPreviewTarget(card.dataset.id);
   }
 
   function setStatus(msg, isError) {
@@ -618,7 +662,7 @@
   }
 
   async function publishBanners() {
-    if (!getToken()) { setStatus('Save your GitHub token first.', true); return; }
+    if (!getToken()) { setStatus('Save your GitHub token first (GitHub connection, at the bottom of this page).', true); return; }
     setStatus('Publishing...');
     try {
       const url = `${GH_API}/contents/banners.json`;
@@ -655,7 +699,7 @@
   }
 
   async function handleUpload(b, file) {
-    if (!getToken()) { setStatus('Save your GitHub token before uploading images.', true); return; }
+    if (!getToken()) { setStatus('Save your GitHub token before uploading images (GitHub connection, at the bottom of this page).', true); return; }
     if (file.size > 5 * 1024 * 1024) { setStatus('The image is larger than 5 MB. Compress it first.', true); return; }
     setStatus('Uploading ' + file.name + '...');
     try {
@@ -671,11 +715,12 @@
       if (!r.ok) throw await ghError(r);
       b.url = ASSET_BASE + encodeURI(path);
       b._preview = dataUrl;
+      previewId = b.id;
       if (nw) b.width = Math.min(600, nw >= 800 ? Math.round(nw / 2) : nw);
       unsaved = true;
       renderSettings();
       refreshSelect();
-      setStatus('Image uploaded. It goes online in 1-2 minutes. Click Publish banners when the banner is ready.');
+      setStatus('Image uploaded. It goes online in 1-2 minutes. Click Publish banner when it is ready.');
     } catch (e) { setStatus(e.message, true); }
   }
 
@@ -698,10 +743,17 @@
   const bannerListEl = document.getElementById('bannerList');
   bannerListEl.addEventListener('input', onBannerEdit);
   bannerListEl.addEventListener('change', onBannerEdit);
+  function selectCard(e) {
+    const card = e.target.closest('.bcard');
+    if (card && card.dataset.id !== previewId) setPreviewTarget(card.dataset.id);
+  }
+  bannerListEl.addEventListener('focusin', selectCard);
+  bannerListEl.addEventListener('click', selectCard);
   bannerListEl.addEventListener('click', function (e) {
     if (e.target.dataset.action !== 'delete') return;
     const card = e.target.closest('.bcard');
     if (!confirm('Delete this banner?')) return;
+    if (previewId === card.dataset.id) previewId = null;
     banners = banners.filter(x => x.id !== card.dataset.id);
     unsaved = true;
     renderSettings();
