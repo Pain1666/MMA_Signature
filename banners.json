@@ -1,13 +1,3 @@
 {
-  "banners": [
-    {
-      "id": "bmwytbi5obu60",
-      "name": "New banner",
-      "url": "https://pain1666.github.io/MMA_Signature/images/banners/2026-11-27-magnific_20171020142520.jpg_gomcrrqsxo.png",
-      "link": "",
-      "width": 200,
-      "active": true,
-      "expires": ""
-    }
-  ]
+  "banners": []
 }
