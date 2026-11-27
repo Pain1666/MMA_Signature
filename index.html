@@ -313,12 +313,13 @@
   // Never rename or delete these files: every signature already sent points to them.
   const ASSET_BASE = 'https://pain1666.github.io/MMA_Signature/';
   const ASSETS = {
-    logo:      ASSET_BASE + 'logoMMA.png',
-    instagram: ASSET_BASE + 'instagram.png',
-    linkedin:  ASSET_BASE + 'linkedin.png',
-    facebook:  ASSET_BASE + 'facebook.png'
+    logo:      ASSET_BASE + 'images/logoMMA.png',
+    instagram: ASSET_BASE + 'images/instagram.png',
+    linkedin:  ASSET_BASE + 'images/linkedin.png',
+    facebook:  ASSET_BASE + 'images/facebook.png',
+    headerLogo: ASSET_BASE + 'images/Logo%20MMA_Black.png'  // page title only; the signature uses "logo"
   };
-  document.getElementById('headerLogo').src = ASSETS.logo;
+  document.getElementById('headerLogo').src = ASSETS.headerLogo;
 
   function getSignatureHTML(name, role, banner) {
     const nameLower = name.toLowerCase() || 'nome cognome';
@@ -661,7 +662,7 @@
       const dataUrl = await readAsDataURL(file);
       const nw = await naturalWidth(dataUrl);
       const slug = file.name.toLowerCase().replace(/[^a-z0-9.\-_]+/g, '-');
-      const path = 'banners/' + todayStr() + '-' + slug;
+      const path = 'images/banners/' + todayStr() + '-' + slug;
       const r = await fetch(`${GH_API}/contents/${encodeURI(path)}`, {
         method: 'PUT',
         headers: ghHeaders({ 'Content-Type': 'application/json' }),
