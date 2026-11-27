@@ -212,6 +212,13 @@
     .sig-sticky h2 { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; font-weight: 700; }
     .sig-sticky h2 span { color: #434343; }
     .sig-scroll { position: relative; max-height: 42vh; overflow: auto; border: 1px solid #eee; padding: 16px; background: #fff; }
+    .copy-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .copy-btn.danger { color: #b23b3b; border-color: #b23b3b; }
+    .copy-btn.danger:hover:not(:disabled) { background: #fbeeee; }
+    .status.warn { color: #b26a00; }
+    .edit-panel { border: 1px solid #ddd; padding: 20px; margin-top: 20px; background: #fff; }
+    .edit-panel h3 { font-size: 11px; color: #434343; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+    .publish-row { margin-top: 28px; padding-top: 4px; border-top: 1px solid #eee; }
     .bcard.sel { border-color: #434343; box-shadow: inset 3px 0 0 #434343; }
   </style>
 </head>
@@ -278,17 +285,58 @@
     <div class="form-section">
       <h2>Banners</h2>
       <p class="hint" style="margin:0 0 20px;">
-        Gmail does not accept images embedded in a signature, so each banner is stored in the GitHub repo
-        and shown from there. Use <strong>Upload image</strong> on a banner (needs the GitHub token below),
-        or paste the link of an image that is already online.
-        Export the image at 2&times; the size you want to display so it stays sharp on retina screens.
-        Only active banners that have not expired appear in the dropdown for staff.
+        Pick a banner to see it in the signature above, then <strong>Modify</strong> or <strong>Delete</strong> it,
+        or <strong>Add</strong> a new one. Changes go live for staff only after you click <strong>Publish banners</strong>.
+        Expired or inactive banners stay in this list but are hidden from staff.
       </p>
-      <div id="bannerList"></div>
-      <button class="copy-btn secondary" id="addBtn" onclick="addBanner()">+ &nbsp; Add banner</button>
-      <button class="copy-btn" id="publishBtn" style="display:none" onclick="publishBanners()">&#8679; &nbsp; Publish banner</button>
-      <p class="hint" id="publishHint" style="display:none">Saves the banner list in the repo. Staff see the change once GitHub refreshes the site, usually within a few minutes.</p>
-      <p class="status" id="ghStatus"></p>
+      <div class="field">
+        <label>Banner</label>
+        <select id="bannerPick"></select>
+      </div>
+      <div class="btn-row">
+        <button class="copy-btn secondary" style="margin-top:0" id="addBtn" onclick="addBanner()">+ &nbsp; Add</button>
+        <button class="copy-btn secondary" style="margin-top:0" id="modifyBtn" onclick="modifyBanner()">Modify</button>
+        <button class="copy-btn secondary danger" style="margin-top:0" id="deleteBtn" onclick="deleteBanner()">Delete</button>
+      </div>
+
+      <div class="edit-panel" id="editPanel" style="display:none">
+        <h3 id="editPanelTitle">Edit banner</h3>
+        <div class="row" style="display:flex; gap:12px;">
+          <div class="field" style="flex:1; min-width:0;"><label>Name (shown in dropdown)</label>
+            <input type="text" data-f="name" placeholder="es. Premio 2026"></div>
+          <div class="field" style="flex:1; min-width:0;"><label>Hide after (optional)</label>
+            <input type="date" data-f="expires"></div>
+        </div>
+        <div class="field"><label>Image</label>
+          <input type="text" data-f="url" placeholder="Image link (https://...)">
+          <input type="file" accept="image/png,image/jpeg,image/gif" data-action="upload" style="margin-top:8px;">
+          <select id="imgPick" style="margin-top:8px;"></select>
+          <p class="hint">Upload a new image, choose one that is already in the repo, or paste a link.</p>
+        </div>
+        <div class="field"><label>Link when clicked (optional)</label>
+          <input type="text" data-f="link" placeholder="https://..."></div>
+        <div class="field"><label>Display width (px)</label>
+          <div class="width-row" style="display:flex; align-items:center; gap:12px;">
+            <input type="range" data-f="width" min="50" max="700" step="1" value="400" style="flex:1; padding:0; border:none;">
+            <input type="number" data-f="width" min="50" max="700" value="400" style="width:90px; flex:none;">
+          </div>
+        </div>
+        <label class="check" style="display:flex; align-items:center; gap:8px; font-size:12px; color:#666; text-transform:none; letter-spacing:0; margin-bottom:16px;">
+          <input type="checkbox" data-f="active" style="width:auto;"> Active (visible to staff)
+        </label>
+        <div class="btn-row">
+          <button class="copy-btn" style="margin-top:0" onclick="applyEdit()">Apply</button>
+          <button class="copy-btn secondary" style="margin-top:0" onclick="cancelEdit()">Cancel</button>
+        </div>
+        <p class="status error" id="editStatus"></p>
+      </div>
+
+      <div class="publish-row">
+        <button class="copy-btn" id="publishBtn" onclick="publishBanners()">&#8679; &nbsp; Publish banners</button>
+        <p class="hint">Saves the banner list in the repo. Staff see the change once GitHub refreshes the site, usually within a few minutes.</p>
+        <p class="status warn" id="unsavedNote" style="display:none">You have changes that are not published yet.</p>
+        <p class="status" id="ghStatus"></p>
+      </div>
     </div>
 
     <div class="form-section" style="background:#fafafa;">
@@ -516,52 +564,28 @@
   }
 
   // ---------- Settings page ----------
-  function cardHTML(b) {
-    const w = clampWidth(b.width);
-    return `<div class="bcard" data-id="${esc(b.id)}">
-      <div class="row">
-        <div class="field"><label>Name (shown in dropdown)</label>
-          <input type="text" data-f="name" value="${esc(b.name)}" placeholder="es. Premio 2026"></div>
-        <div class="field"><label>Hide after (optional)</label>
-          <input type="date" data-f="expires" value="${esc(b.expires)}"></div>
-      </div>
-      <div class="field"><label>Image URL</label>
-        <input type="text" data-f="url" value="${esc(b.url)}" placeholder="https://..."> 
-        <input type="file" accept="image/png,image/jpeg,image/gif" data-action="upload" style="margin-top:8px;">
-        <p class="hint">Upload image saves the file in the repo and fills in the link.</p></div>
-      <div class="field"><label>Link when clicked (optional)</label>
-        <input type="text" data-f="link" value="${esc(b.link)}" placeholder="https://..."></div>
-      <div class="field"><label>Display width (px)</label>
-        <div class="width-row">
-          <input type="range" data-f="width" min="50" max="700" step="1" value="${w}">
-          <input type="number" data-f="width" min="50" max="700" value="${w}">
-        </div>
-      </div>
-      <label>Preview at actual size</label>
-      <div class="bprev"><img src="${esc(b._preview || normUrl(b.url))}" alt="Image not loading &mdash; check the link" width="${w}"></div>
-      <div class="bcard-actions">
-        <label class="check"><input type="checkbox" data-f="active" ${b.active !== false ? 'checked' : ''}> Active (visible to staff)</label>
-        <button class="link-btn" data-action="delete">Delete</button>
-      </div>
-    </div>`;
+  let selectedId = null;
+  let draft = null;            // { isNew, b } while the editor is open
+  let lastScrolledId = null;
+  const $ = id => document.getElementById(id);
+
+  function statusSuffix(b) {
+    if (b.active === false) return ' (inactive)';
+    if (b.expires && b.expires < todayStr()) return ' (expired)';
+    return '';
   }
 
-  let previewId = null;
-  let lastScrolledId = null;
-
-  function markSelected() {
-    document.querySelectorAll('#bannerList .bcard').forEach(function (c) {
-      c.classList.toggle('sel', c.dataset.id === previewId);
-    });
+  function currentBanner() {
+    return draft ? draft.b : (banners.find(x => x.id === selectedId) || null);
   }
 
   function renderSigPreview(scroll) {
-    const b = banners.find(x => x.id === previewId) || null;
-    const box = document.getElementById('sigPreview');
-    document.getElementById('sigPreviewName').textContent = b ? (b.name || 'Untitled') : '';
+    const b = currentBanner();
+    const box = $('sigPreview');
+    $('sigPreviewName').textContent = b ? (b.name || 'Untitled') : '';
     box.innerHTML = getSignatureHTML('', '', b, true);
     if (b && !(b._preview || normUrl(b.url))) {
-      box.insertAdjacentHTML('afterbegin', '<p class="hint" style="margin:0 0 12px;">Add an image link or upload an image to see this banner in the signature.</p>');
+      box.insertAdjacentHTML('afterbegin', '<p class="hint" style="margin:0 0 12px;">Add an image to see this banner in the signature.</p>');
     }
     if (scroll || lastScrolledId !== (b && b.id)) {
       const img = box.querySelector('img[data-banner]');
@@ -570,64 +594,152 @@
     }
   }
 
-  function setPreviewTarget(id) {
-    const changed = id !== previewId;
-    previewId = id;
-    markSelected();
-    renderSigPreview(changed);
+  function renderBannerControls() {
+    const editing = !!draft;
+    if (!banners.some(x => x.id === selectedId)) selectedId = banners.length ? banners[0].id : null;
+    const pick = $('bannerPick');
+    pick.innerHTML = banners.length
+      ? banners.map(b => `<option value="${esc(b.id)}">${esc((b.name || 'Untitled') + statusSuffix(b))}</option>`).join('')
+      : '<option value="">No banners yet</option>';
+    pick.value = selectedId || '';
+    pick.disabled = editing || !banners.length;
+    $('addBtn').disabled = editing;
+    $('modifyBtn').disabled = editing || !banners.length;
+    $('deleteBtn').disabled = editing || !banners.length;
+    $('publishBtn').disabled = editing;
+    $('editPanel').style.display = editing ? '' : 'none';
+    $('unsavedNote').style.display = unsaved ? '' : 'none';
+  }
+
+  function fillEditor() {
+    if (!draft) return;
+    const b = draft.b, p = $('editPanel');
+    $('editPanelTitle').textContent = draft.isNew ? 'New banner' : 'Edit banner';
+    p.querySelector('[data-f="name"]').value = b.name || '';
+    p.querySelector('[data-f="expires"]').value = b.expires || '';
+    p.querySelector('[data-f="url"]').value = b.url || '';
+    p.querySelector('[data-f="link"]').value = b.link || '';
+    p.querySelectorAll('[data-f="width"]').forEach(el => { el.value = clampWidth(b.width); });
+    p.querySelector('[data-f="active"]').checked = b.active !== false;
   }
 
   function renderSettings() {
-    const list = document.getElementById('bannerList');
-    list.innerHTML = banners.length ? banners.map(cardHTML).join('') : '<p class="empty">No banners yet.</p>';
-    if (!banners.some(x => x.id === previewId)) previewId = banners.length ? banners[0].id : null;
-    markSelected();
+    renderBannerControls();
+    fillEditor();
     renderSigPreview(false);
-    document.getElementById('addBtn').style.display = banners.length ? 'none' : '';
-    document.getElementById('publishBtn').style.display = banners.length ? '' : 'none';
-    document.getElementById('publishHint').style.display = banners.length ? '' : 'none';
+  }
+
+  function setEditStatus(msg, ok) {
+    const el = $('editStatus');
+    el.textContent = msg || '';
+    el.className = 'status' + (ok ? '' : ' error');
+  }
+
+  function openEditor() {
+    setEditStatus('');
+    renderBannerControls();
+    fillEditor();
+    renderSigPreview(true);
+    loadImageList();
+    $('editPanel').scrollIntoView({ block: 'nearest' });
   }
 
   function addBanner() {
-    const nb = {
+    if (draft) return;
+    draft = { isNew: true, b: {
       id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       name: 'New banner', url: '', link: '', width: 400, active: true, expires: ''
-    };
-    banners.push(nb);
-    previewId = nb.id;
+    } };
+    openEditor();
+  }
+
+  function modifyBanner() {
+    const b = banners.find(x => x.id === selectedId);
+    if (draft || !b) return;
+    draft = { isNew: false, b: Object.assign({}, b) };
+    openEditor();
+  }
+
+  function cancelEdit() {
+    draft = null;
+    setEditStatus('');
+    renderSettings();
+  }
+
+  function applyEdit() {
+    if (!draft) return;
+    const b = draft.b;
+    if (!(b.name || '').trim()) { setEditStatus('Give the banner a name.'); return; }
+    if (!(b._preview || normUrl(b.url))) { setEditStatus('Add an image: upload one, choose an uploaded one, or paste a link.'); return; }
+    if (draft.isNew) banners.push(b);
+    else { const i = banners.findIndex(x => x.id === b.id); if (i > -1) banners[i] = b; }
+    selectedId = b.id;
+    draft = null;
+    unsaved = true;
+    setEditStatus('');
+    renderSettings();
+    refreshSelect();
+    setStatus('Changes applied. Click Publish banners to make them live.');
+  }
+
+  function deleteBanner() {
+    const b = banners.find(x => x.id === selectedId);
+    if (draft || !b) return;
+    if (!confirm('Delete "' + (b.name || 'Untitled') + '"? The image file stays in the repo.')) return;
+    banners = banners.filter(x => x.id !== b.id);
+    selectedId = null;
     unsaved = true;
     renderSettings();
     refreshSelect();
+    setStatus('Banner deleted. Click Publish banners to make it live.');
   }
 
-  function onBannerEdit(e) {
-    const card = e.target.closest('.bcard');
-    if (!card) return;
-    const b = banners.find(x => x.id === card.dataset.id);
-    if (!b) return;
+  function onEditorInput(e) {
+    if (!draft) return;
+    const b = draft.b;
     if (e.target.dataset.action === 'upload') {
       if (e.type === 'change' && e.target.files && e.target.files[0]) handleUpload(b, e.target.files[0]);
+      return;
+    }
+    if (e.target.id === 'imgPick') {
+      if (e.type === 'change' && e.target.value) {
+        b.url = ASSET_BASE + encodeURI(e.target.value);
+        delete b._preview;
+        fillEditor();
+        renderSigPreview(false);
+      }
       return;
     }
     const f = e.target.dataset.f;
     if (!f) return;
     if (f === 'url') delete b._preview;
-
     if (f === 'active') b.active = e.target.checked;
     else if (f === 'width') {
       b.width = clampWidth(e.target.value);
-      card.querySelectorAll('[data-f="width"]').forEach(el => { if (el !== e.target) el.value = b.width; });
+      $('editPanel').querySelectorAll('[data-f="width"]').forEach(el => { if (el !== e.target) el.value = b.width; });
     } else b[f] = e.target.value;
-
     if (f === 'url' && e.type === 'change') e.target.value = b.url = normUrl(b.url) || b.url.trim();
+    renderSigPreview(false);
+  }
 
-    const img = card.querySelector('.bprev img');
-    img.src = b._preview || normUrl(b.url);
-    img.width = clampWidth(b.width);
-
-    unsaved = true;
-    refreshSelect();
-    setPreviewTarget(card.dataset.id);
+  // Images already uploaded to the repo (images/banners)
+  async function loadImageList() {
+    const sel = $('imgPick');
+    sel.innerHTML = '<option value="">Loading uploaded images...</option>';
+    try {
+      const headers = getToken() ? ghHeaders() : { 'Accept': 'application/vnd.github+json' };
+      const r = await fetch(`${GH_API}/contents/images/banners?ref=${GH.branch}`, { headers: headers, cache: 'no-store' });
+      if (!r.ok) throw new Error('list');
+      const files = (await r.json()).filter(f => f.type === 'file' && /\.(png|jpe?g|gif)$/i.test(f.name));
+      const used = {};
+      banners.forEach(x => { used[normUrl(x.url)] = x.name || 'Untitled'; });
+      sel.innerHTML = '<option value="">Choose an uploaded image...</option>' + files.map(f => {
+        const u = ASSET_BASE + encodeURI(f.path);
+        return `<option value="${esc(f.path)}">${esc(f.name)}${used[u] ? esc(' (used by ' + used[u] + ')') : ''}</option>`;
+      }).join('');
+    } catch (e) {
+      sel.innerHTML = '<option value="">Uploaded images could not be listed</option>';
+    }
   }
 
   function setStatus(msg, isError) {
@@ -680,6 +792,7 @@
       const p = await fetch(url, { method: 'PUT', headers: ghHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
       if (!p.ok) throw await ghError(p);
       unsaved = false;
+      renderBannerControls();
       setStatus('Published. Staff will see the changes once GitHub refreshes the site (usually 1-10 minutes).');
     } catch (e) { setStatus(e.message, true); }
   }
@@ -704,9 +817,9 @@
   }
 
   async function handleUpload(b, file) {
-    if (!getToken()) { setStatus('Save your GitHub token before uploading images (GitHub connection, at the bottom of this page).', true); return; }
-    if (file.size > 5 * 1024 * 1024) { setStatus('The image is larger than 5 MB. Compress it first.', true); return; }
-    setStatus('Uploading ' + file.name + '...');
+    if (!getToken()) { setEditStatus('Save your GitHub token before uploading images (GitHub connection, at the bottom of this page).'); return; }
+    if (file.size > 5 * 1024 * 1024) { setEditStatus('The image is larger than 5 MB. Compress it first.'); return; }
+    setEditStatus('Uploading ' + file.name + '...', true);
     try {
       const dataUrl = await readAsDataURL(file);
       const nw = await naturalWidth(dataUrl);
@@ -720,13 +833,12 @@
       if (!r.ok) throw await ghError(r);
       b.url = ASSET_BASE + encodeURI(path);
       b._preview = dataUrl;
-      previewId = b.id;
       if (nw) b.width = Math.min(600, nw >= 800 ? Math.round(nw / 2) : nw);
-      unsaved = true;
-      renderSettings();
-      refreshSelect();
-      setStatus('Image uploaded. It goes online in 1-2 minutes. Click Publish banner when it is ready.');
-    } catch (e) { setStatus(e.message, true); }
+      fillEditor();
+      renderSigPreview(false);
+      loadImageList();
+      setEditStatus('Image uploaded. It goes online in 1-2 minutes. Click Apply, then Publish banners.', true);
+    } catch (e) { setEditStatus(e.message); }
   }
 
   function downloadJson() {
@@ -745,24 +857,11 @@
     if (settings) renderSettings();
   }
 
-  const bannerListEl = document.getElementById('bannerList');
-  bannerListEl.addEventListener('input', onBannerEdit);
-  bannerListEl.addEventListener('change', onBannerEdit);
-  function selectCard(e) {
-    const card = e.target.closest('.bcard');
-    if (card && card.dataset.id !== previewId) setPreviewTarget(card.dataset.id);
-  }
-  bannerListEl.addEventListener('focusin', selectCard);
-  bannerListEl.addEventListener('click', selectCard);
-  bannerListEl.addEventListener('click', function (e) {
-    if (e.target.dataset.action !== 'delete') return;
-    const card = e.target.closest('.bcard');
-    if (!confirm('Delete this banner?')) return;
-    if (previewId === card.dataset.id) previewId = null;
-    banners = banners.filter(x => x.id !== card.dataset.id);
-    unsaved = true;
-    renderSettings();
-    refreshSelect();
+  $('editPanel').addEventListener('input', onEditorInput);
+  $('editPanel').addEventListener('change', onEditorInput);
+  $('bannerPick').addEventListener('change', function (e) {
+    selectedId = e.target.value || null;
+    renderSigPreview(true);
   });
   window.addEventListener('hashchange', route);
   window.addEventListener('beforeunload', function (e) {
