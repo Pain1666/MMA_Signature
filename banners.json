@@ -1,3 +1,13 @@
 {
-  "banners": []
+  "banners": [
+    {
+      "id": "bmwyu5ep4y03f",
+      "name": "New banner",
+      "url": "https://pain1666.github.io/MMA_Signature/images/banners/2026-11-27-econocom--600.png",
+      "link": "",
+      "width": 198,
+      "active": true,
+      "expires": ""
+    }
+  ]
 }
